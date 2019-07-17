@@ -1,0 +1,10 @@
+- name: "Create postgres service account ( and dedicated SCC for him ) in  project:  {{ project_name }}"
+  k8s:
+
+
+    state: present
+    definition: "{{ item }}"
+  loop: "{{ lookup('template', '{{ postgres_sa_template_name }}' ) | from_yaml_all | list }}"
+
+
+

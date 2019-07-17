@@ -1,0 +1,34 @@
+- k8s_facts:
+
+
+    kind: Namespace
+    name: "{{ project_name }}"
+  register: namespace
+
+- debug:
+    msg: "{{ namespace }}"
+    
+
+- set_fact:
+        search_result: []
+
+- set_fact:
+       search_result:  "{{ namespace['items'] }}"
+  when:   namespace['items'] is defined
+
+- set_fact:
+    search_result:  "{{ namespace['resources'] }}"
+  when:   namespace['resources'] is defined
+
+- name: Create OpenShift project
+  k8s:
+
+
+    state: present
+    definition: "{{ item }}"
+  loop: "{{ lookup('template', '{{ project_template }}') | from_yaml_all | list }}"
+
+
+
+
+

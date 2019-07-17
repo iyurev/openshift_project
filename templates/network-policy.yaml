@@ -1,0 +1,55 @@
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  namespace: "{{ project_name }}"
+  name: deny-by-default
+spec:
+  podSelector:
+  ingress: []
+
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  namespace: "{{ project_name }}"
+  name: allow-same-namespace
+spec:
+  podSelector:
+  ingress:
+  - from:
+    - podSelector: {}
+
+---
+kind: NetworkPolicy
+apiVersion: extensions/v1beta1
+metadata:
+  namespace: "{{ project_name }}"
+  name: allow-from-default-namespace
+spec:
+  podSelector:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: default
+
+{% if allow_from_projects | length != 0 %}
+{% for allow_from_project in allow_from_projects  %}
+---
+kind: NetworkPolicy
+apiVersion: extensions/v1beta1
+metadata:
+  namespace: "{{ project_name }}"
+  name: allow-from-{{ allow_from_project }}-namespace
+spec:
+  podSelector:
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: {{ allow_from_project }}
+{% endfor %}
+{% endif %}
+
+

@@ -1,0 +1,213 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+      name: {{ project_name }}
+      labels:
+        name: "{{ project_name }}"
+        default-router: "{{ default_router }}"
+{% if labels | length != 0 %}
+{% for label in labels %}
+        {{ label }}: "{{ labels[label] }}"
+{% endfor %}
+{% endif %}
+
+---
+apiVersion: project.openshift.io/v1
+kind: Project
+metadata:
+  annotations:
+    openshift.io/description: "{{ description }}"
+    openshift.io/display-name: "{{ displayname }}"
+    openshift.io/node-selector: "{{ selector }}"
+  name: "{{ project_name }}"
+spec: {}
+status: {}
+
+{% if egressips | length != 0 %}
+---
+apiVersion: network.openshift.io/v1
+egressIPs:
+{% for egressip in egressips %}
+- {{ egressip }}
+{% endfor %}
+kind: NetNamespace
+metadata:
+  name: {{ project_name }}
+netname: {{ project_name }}
+{% endif %}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  annotations:
+    openshift.io/description: Allows all pods in this namespace to pull images from
+      this namespace.  It is auto-managed by a controller; remove subjects to disable.
+  name: system:image-pullers
+  namespace: "{{ project_name }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:image-puller
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:serviceaccounts:{{ project_name }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  annotations:
+    openshift.io/description: Allows builds in this namespace to push images to
+      this namespace.  It is auto-managed by a controller; remove subjects to disable.
+  creationTimestamp: null
+  name: system:image-builders
+  namespace: "{{ project_name }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:image-builder
+subjects:
+- kind: ServiceAccount
+  name: builder
+  namespace: "{{ project_name }}"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  annotations:
+    openshift.io/description: Allows deploymentconfigs in this namespace to rollout
+      pods in this namespace.  It is auto-managed by a controller; remove subjects
+      to disable.
+  creationTimestamp: null
+  name: system:deployers
+  namespace: "{{ project_name }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:deployer
+subjects:
+- kind: ServiceAccount
+  name: deployer
+  namespace: "{{ project_name }}"
+
+
+
+{% if project_viewers | length !=0  %}
+---
+apiVersion: v1
+kind: Group
+metadata:
+  annotations:
+  creationTimestamp: null
+  name: "{{ project_name }}-viewers"
+users:
+{% for user in project_viewers %}
+- {{ user }}
+{% endfor %}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+ creationTimestamp: null
+ name: view
+ namespace: "{{ project_name }}"
+roleRef:
+ apiGroup: rbac.authorization.k8s.io
+ kind: ClusterRole
+ name: view
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: "{{ project_name }}-viewers"
+{% endif %}
+
+
+{% if project_admins | length !=0  %}
+---
+apiVersion: v1
+kind: Group
+metadata:
+  annotations:
+  creationTimestamp: null
+  name: "{{ project_name }}-admins"
+users:
+{% for user in project_admins %}
+- {{ user }}
+{% endfor %}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: infra-project-admins
+  namespace: "{{ project_name }}"
+  annotations:
+    openshift.io/description: DONT'T EDIT THIS ROLEBINDING MANUALY!!!
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: "{{ project_name }}-admins"
+{% for user in project_admins %}
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: {{ user }}
+{% endfor %}
+{% endif %}
+
+
+{% if  search_result | length == 0 %}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: admin
+  namespace: "{{ project_name }}"
+  annotations:
+    openshift.io/description: Project admins .
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+subjects: []
+{% endif %}
+
+
+{% if ldap_group_prefix != '' %}
+---
+apiVersion: authorization.openshift.io/v1
+groupNames:
+- {{ ldap_group_prefix }}-{{  project_name  }}-admins
+kind: RoleBinding
+metadata:
+  name: {{ ldap_group_prefix }}-{{  project_name  }}-admins
+  namespace: {{  project_name  }}
+roleRef:
+    name: admin
+subjects:
+- kind: Group
+  name: {{ ldap_group_prefix }}-{{  project_name  }}-admins
+userNames: null
+
+---
+apiVersion: authorization.openshift.io/v1
+groupNames:
+- {{ ldap_group_prefix }}-{{  project_name  }}-viewers
+kind: RoleBinding
+metadata:
+  name: {{ ldap_group_prefix }}-{{  project_name  }}-viewers
+  namespace: {{  project_name  }}
+roleRef:
+    name: view
+subjects:
+- kind: Group
+  name: {{ ldap_group_prefix }}-{{  project_name  }}-viewers
+userNames: null
+{% endif %}

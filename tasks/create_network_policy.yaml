@@ -1,0 +1,10 @@
+- name: "Create networkpolicies  for project:  {{ project_name }}"
+  k8s:
+
+
+    state: present
+    definition: "{{ item }}"
+  loop: "{{ lookup('template', '{{ network_policy_template }}' ) | from_yaml_all | list }}"
+
+
+

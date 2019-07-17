@@ -1,0 +1,10 @@
+- name: "Create limitrange and resource quota  for project:  {{ project_name }}"
+  k8s:
+
+
+     state: present
+     definition: "{{ item }}"
+  loop: "{{ lookup('template', '{{ limits_template }}' ) | from_yaml_all | list }}"
+
+
+

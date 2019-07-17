@@ -1,0 +1,13 @@
+---
+
+ - block:
+    - include_tasks: create_project.yaml
+    - include_tasks: postgres.yaml
+      when: project_for_postgres
+
+    - include_tasks: create_limit_range.yaml
+    - include_tasks: create_network_policy.yaml
+   when: apply_limit_and_quota_only | bool == false
+
+ - include_tasks: create_limit_range.yaml
+   when: apply_limit_and_quota_only | bool  == true
