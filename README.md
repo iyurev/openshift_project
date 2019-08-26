@@ -26,8 +26,16 @@ six
 
 Role Variables
 --------------
+Description of most "interesting" role variables: 
 
-
+```egressips``` - list  of EgressIP for  a project
+```project_for_postgres```  - create dedicated service account and  SCC for its, it's allowing run postgresql pod 
+with any UID .   
+```allow_from_projects``` - allow  ANY network traffic from projects in this list
+```labels``` - project labels list 
+```default_router``` - default value is ```yes``` - it's adding label ```default-router: "yes"``` to project.   
+```apply_limit_and_quota_only``` - if ```yes``` - include tasks only for configure project quota . 
+ 
 
 
 Example Playbook
